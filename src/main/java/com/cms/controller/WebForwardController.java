@@ -11,18 +11,18 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class WebForwardController {
 
-    @GetMapping({"/api", "/api/", "/api/index.html"})
-    public String forwardIndex() {
+    @GetMapping({
+            "/api",
+            "/api/",
+            "/api/index.html",
+            "/student-dashboard.html",
+            "/teacher-dashboard.html",
+            "/api/student-dashboard.html",
+            "/api/teacher-dashboard.html",
+            "/login.html",
+            "/register.html"
+    })
+    public String forwardSpaRoutes() {
         return "forward:/index.html";
-    }
-
-    @GetMapping("/api/student-dashboard.html")
-    public String forwardStudentDashboard() {
-        return "forward:/student-dashboard.html";
-    }
-
-    @GetMapping("/api/teacher-dashboard.html")
-    public String forwardTeacherDashboard() {
-        return "forward:/teacher-dashboard.html";
     }
 }
