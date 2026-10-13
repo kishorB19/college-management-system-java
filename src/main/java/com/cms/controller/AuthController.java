@@ -29,4 +29,14 @@ public class AuthController {
         String message = authService.register(registerRequest);
         return ResponseEntity.ok(ApiResponse.success(message));
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse> getCurrentUser(org.springframework.security.core.Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Not authenticated"));
+        }
+        JwtResponse jwtResponse = authService.getCurrentUser(authentication.getName());
+        return ResponseEntity.ok(ApiResponse.success("Current user profile", jwtResponse));
+    }
 }

@@ -11,6 +11,7 @@ import lombok.*;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ExamResult {
 
     @Id
@@ -19,6 +20,7 @@ public class ExamResult {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "user"})
     private Student student;
 
     @Column(nullable = false)
@@ -40,5 +42,6 @@ public class ExamResult {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "entered_by")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "user"})
     private Teacher enteredBy;
 }

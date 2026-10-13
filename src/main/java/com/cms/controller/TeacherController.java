@@ -6,11 +6,10 @@ import com.cms.dto.request.ExamResultRequest;
 import com.cms.dto.request.GradeSubmissionRequest;
 import com.cms.dto.response.ApiResponse;
 import com.cms.dto.response.DashboardStats;
-import com.cms.entity.Assignment;
-import com.cms.entity.AssignmentSubmission;
-import com.cms.entity.Attendance;
-import com.cms.entity.ExamResult;
-import com.cms.entity.LeaveRequest;
+import com.cms.entity.*;
+import com.cms.exception.ResourceNotFoundException;
+import com.cms.repository.StudentRepository;
+import com.cms.repository.TeacherRepository;
 import com.cms.service.*;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping({"/api/teacher", "/teacher"})
@@ -35,11 +36,42 @@ public class TeacherController {
     private AttendanceService attendanceService;
     @Autowired
     private ExamResultService examResultService;
+    @Autowired
+    private TeacherRepository teacherRepository;
+    @Autowired
+    private StudentRepository studentRepository;
+
+    private Teacher getTeacher(Long teacherId) {
+        return teacherRepository.findById(teacherId)
+                .or(() -> teacherRepository.findByUserId(teacherId))
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher", "id", teacherId));
+    }
 
     @GetMapping("/dashboard/{teacherId}")
     public ResponseEntity<ApiResponse> getDashboard(@PathVariable Long teacherId) {
         DashboardStats stats = dashboardService.getTeacherDashboard(teacherId);
         return ResponseEntity.ok(ApiResponse.success("Dashboard stats retrieved", stats));
+    }
+
+    @GetMapping("/{teacherId}/profile")
+    public ResponseEntity<ApiResponse> getProfile(@PathVariable Long teacherId) {
+        Teacher teacher = getTeacher(teacherId);
+        return ResponseEntity.ok(ApiResponse.success("Teacher profile retrieved", teacher));
+    }
+
+    @GetMapping("/students")
+    public ResponseEntity<ApiResponse> getStudents(
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) String semester) {
+        List<Student> students;
+        if (department != null && semester != null) {
+            students = studentRepository.findByDepartmentAndSemester(department, semester);
+        } else if (department != null) {
+            students = studentRepository.findByDepartment(department);
+        } else {
+            students = studentRepository.findAll();
+        }
+        return ResponseEntity.ok(ApiResponse.success("Students retrieved", students));
     }
 
     @PostMapping("/attendance/mark")
@@ -65,8 +97,15 @@ public class TeacherController {
 
     @GetMapping("/{teacherId}/assignments")
     public ResponseEntity<ApiResponse> getAssignments(@PathVariable Long teacherId) {
+        Teacher teacher = getTeacher(teacherId);
         return ResponseEntity.ok(ApiResponse.success("Assignments retrieved",
-                assignmentService.getTeacherAssignments(teacherId)));
+                assignmentService.getTeacherAssignments(teacher.getId())));
+    }
+
+    @GetMapping("/assignments/{assignmentId}/submissions")
+    public ResponseEntity<ApiResponse> getAssignmentSubmissions(@PathVariable Long assignmentId) {
+        List<AssignmentSubmission> submissions = assignmentService.getSubmissionsForAssignment(assignmentId);
+        return ResponseEntity.ok(ApiResponse.success("Submissions retrieved", submissions));
     }
 
     @PostMapping("/assignments/grade/{submissionId}")

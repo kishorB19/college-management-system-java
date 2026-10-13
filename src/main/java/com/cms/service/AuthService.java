@@ -49,9 +49,14 @@ public class AuthService {
      * Authenticate user and return JWT token.
      */
     public JwtResponse login(LoginRequest loginRequest) {
+        String identifier = loginRequest.getUsernameOrEmail();
+        if (identifier == null || identifier.trim().isEmpty()) {
+            throw new BadRequestException("Username or email is required");
+        }
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        loginRequest.getUsernameOrEmail(),
+                        identifier,
                         loginRequest.getPassword()
                 )
         );
@@ -59,19 +64,93 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String token = jwtTokenProvider.generateToken(authentication);
 
-        User user = userRepository.findByUsernameOrEmail(
-                loginRequest.getUsernameOrEmail(),
-                loginRequest.getUsernameOrEmail()
-        ).orElseThrow(() -> new BadRequestException("User not found"));
+        User user = userRepository.findByUsernameOrEmail(identifier, identifier)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        Long studentId = null;
+        Long teacherId = null;
+        Long profileId = null;
+        String department = null;
+        String semester = null;
+
+        if (user.getRole() == Role.ROLE_STUDENT) {
+            var studentOpt = studentRepository.findByUserId(user.getId());
+            if (studentOpt.isPresent()) {
+                var s = studentOpt.get();
+                studentId = s.getId();
+                profileId = s.getId();
+                department = s.getDepartment();
+                semester = s.getSemester();
+            }
+        } else if (user.getRole() == Role.ROLE_TEACHER) {
+            var teacherOpt = teacherRepository.findByUserId(user.getId());
+            if (teacherOpt.isPresent()) {
+                var t = teacherOpt.get();
+                teacherId = t.getId();
+                profileId = t.getId();
+                department = t.getDepartment();
+            }
+        }
 
         return JwtResponse.builder()
                 .accessToken(token)
                 .tokenType("Bearer")
                 .userId(user.getId())
+                .profileId(profileId)
+                .studentId(studentId)
+                .teacherId(teacherId)
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .role(user.getRole().name())
+                .department(department)
+                .semester(semester)
+                .build();
+    }
+
+    /**
+     * Get details of currently logged-in user.
+     */
+    public JwtResponse getCurrentUser(String username) {
+        User user = userRepository.findByUsernameOrEmail(username, username)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        Long studentId = null;
+        Long teacherId = null;
+        Long profileId = null;
+        String department = null;
+        String semester = null;
+
+        if (user.getRole() == Role.ROLE_STUDENT) {
+            var studentOpt = studentRepository.findByUserId(user.getId());
+            if (studentOpt.isPresent()) {
+                var s = studentOpt.get();
+                studentId = s.getId();
+                profileId = s.getId();
+                department = s.getDepartment();
+                semester = s.getSemester();
+            }
+        } else if (user.getRole() == Role.ROLE_TEACHER) {
+            var teacherOpt = teacherRepository.findByUserId(user.getId());
+            if (teacherOpt.isPresent()) {
+                var t = teacherOpt.get();
+                teacherId = t.getId();
+                profileId = t.getId();
+                department = t.getDepartment();
+            }
+        }
+
+        return JwtResponse.builder()
+                .userId(user.getId())
+                .profileId(profileId)
+                .studentId(studentId)
+                .teacherId(teacherId)
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole().name())
+                .department(department)
+                .semester(semester)
                 .build();
     }
 

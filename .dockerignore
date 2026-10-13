@@ -1,8 +1,0 @@
-target/
-.git/
-.gitignore
-*.zip
-apache-maven-*/
-*.iml
-.idea/
-.vscode/
