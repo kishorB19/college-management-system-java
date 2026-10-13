@@ -1,4 +1,6 @@
-const BASE_URL = '/api';
+const BASE_URL = typeof window !== 'undefined' && window.location.port === '5173'
+  ? 'http://localhost:8080/api'
+  : '/api';
 
 /**
  * Helper to get the auth headers with JWT token.

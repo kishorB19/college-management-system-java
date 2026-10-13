@@ -114,24 +114,25 @@ export default function TeacherDashboard() {
         api.getPendingLeaves(),
       ]);
 
-      if (statsRes.status === 'fulfilled' && statsRes.value?.success) {
+      if (statsRes.status === 'fulfilled' && statsRes.value?.success && statsRes.value.data) {
         setStats(statsRes.value.data);
       }
-      if (profRes.status === 'fulfilled' && profRes.value?.success) {
+      if (profRes.status === 'fulfilled' && profRes.value?.success && profRes.value.data) {
         setProfile(profRes.value.data);
       }
       if (studRes.status === 'fulfilled' && studRes.value?.success) {
-        setStudents(studRes.value.data);
-        if (studRes.value.data.length > 0) {
-          setAttForm((prev) => ({ ...prev, studentId: studRes.value.data[0].id }));
-          setResultForm((prev) => ({ ...prev, studentId: studRes.value.data[0].id }));
+        const studentList = Array.isArray(studRes.value.data) ? studRes.value.data : [];
+        setStudents(studentList);
+        if (studentList.length > 0) {
+          setAttForm((prev) => ({ ...prev, studentId: studentList[0].id }));
+          setResultForm((prev) => ({ ...prev, studentId: studentList[0].id }));
         }
       }
       if (asgRes.status === 'fulfilled' && asgRes.value?.success) {
-        setAssignments(asgRes.value.data);
+        setAssignments(Array.isArray(asgRes.value.data) ? asgRes.value.data : []);
       }
       if (leavesRes.status === 'fulfilled' && leavesRes.value?.success) {
-        setPendingLeaves(leavesRes.value.data);
+        setPendingLeaves(Array.isArray(leavesRes.value.data) ? leavesRes.value.data : []);
       }
     } finally {
       setLoading(false);

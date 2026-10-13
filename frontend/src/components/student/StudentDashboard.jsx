@@ -91,29 +91,29 @@ export default function StudentDashboard() {
         api.getStudentLeaves(studentId),
       ]);
 
-      if (statsRes.status === 'fulfilled' && statsRes.value?.success) {
+      if (statsRes.status === 'fulfilled' && statsRes.value?.success && statsRes.value.data) {
         setStats(statsRes.value.data);
       }
-      if (profRes.status === 'fulfilled' && profRes.value?.success) {
+      if (profRes.status === 'fulfilled' && profRes.value?.success && profRes.value.data) {
         setProfile(profRes.value.data);
       }
       if (attRes.status === 'fulfilled' && attRes.value?.success) {
-        setAttendance(attRes.value.data);
+        setAttendance(Array.isArray(attRes.value.data) ? attRes.value.data : []);
       }
       if (resRes.status === 'fulfilled' && resRes.value?.success) {
-        setResults(resRes.value.data);
+        setResults(Array.isArray(resRes.value.data) ? resRes.value.data : []);
       }
       if (feeRes.status === 'fulfilled' && feeRes.value?.success) {
-        setFees(feeRes.value.data);
+        setFees(Array.isArray(feeRes.value.data) ? feeRes.value.data : []);
       }
       if (subRes.status === 'fulfilled' && subRes.value?.success) {
-        setSubmissions(subRes.value.data);
+        setSubmissions(Array.isArray(subRes.value.data) ? subRes.value.data : []);
       }
       if (availRes.status === 'fulfilled' && availRes.value?.success) {
-        setAvailableAssignments(availRes.value.data);
+        setAvailableAssignments(Array.isArray(availRes.value.data) ? availRes.value.data : []);
       }
       if (leaveRes.status === 'fulfilled' && leaveRes.value?.success) {
-        setLeaves(leaveRes.value.data);
+        setLeaves(Array.isArray(leaveRes.value.data) ? leaveRes.value.data : []);
       }
     } catch (err) {
       setError('Failed to fetch some dashboard data.');
