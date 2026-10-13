@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edutrack - College Management System</title>
+    <meta name="description" content="A comprehensive College Management System for Students and Teachers">
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="blob-c">
+        <div class="shape-blob"></div>
+        <div class="shape-blob one"></div>
+        <div class="shape-blob two"></div>
+    </div>
+    
+    <header class="glass-header">
+        <div class="logo">
+            <h1>Edu<span>Track</span></h1>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#" class="active">Home</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#about">About</a></li>
+                <li><button class="btn-login" onclick="openModal('loginModal')">Login</button></li>
+                <li><button class="btn-register" onclick="openModal('registerModal')">Sign Up</button></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="hero-content">
+                <h2>Next Generation <br><span class="gradient-text">College Management</span></h2>
+                <p>Seamlessly manage attendance, exams, fees, and assignments with our powerful, intuitive portal designed for modern educational institutions.</p>
+                <div class="hero-buttons">
+                    <button class="btn-primary" onclick="openModal('registerModal')">Get Started</button>
+                    <button class="btn-secondary" onclick="document.getElementById('features').scrollIntoView({behavior: 'smooth'})">Explore Features</button>
+                </div>
+            </div>
+            <div class="hero-image glass-card">
+                <div class="dashboard-mockup">
+                    <div class="mock-header"></div>
+                    <div class="mock-body">
+                        <div class="mock-sidebar"></div>
+                        <div class="mock-content">
+                            <div class="mock-cards">
+                                <div></div>
+                                <div></div>
+                                <div></div>
+                            </div>
+                            <div class="mock-chart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <h3 class="section-title">Everything you need, in one place</h3>
+            <div class="feature-grid">
+                <div class="feature-card glass-card">
+                    <div class="icon">📊</div>
+                    <h4>Attendance Tracking</h4>
+                    <p>Mark, monitor, and analyze student attendance in real-time.</p>
+                </div>
+                <div class="feature-card glass-card">
+                    <div class="icon">📝</div>
+                    <h4>Assignments & Grading</h4>
+                    <p>Easily create assignments, manage submissions, and provide instant feedback.</p>
+                </div>
+                <div class="feature-card glass-card">
+                    <div class="icon">💳</div>
+                    <h4>Fee Management</h4>
+                    <p>Track payments, dues, and transaction histories securely.</p>
+                </div>
+                <div class="feature-card glass-card">
+                    <div class="icon">🏆</div>
+                    <h4>Exam Results</h4>
+                    <p>Publish marks and generate comprehensive performance reports.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modals -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content glass-card">
+            <span class="close" onclick="closeModal('loginModal')">&times;</span>
+            <h2>Welcome Back</h2>
+            <p>Login to your account</p>
+            <form id="loginForm">
+                <div class="input-group">
+                    <input type="text" id="loginUsername" required placeholder=" ">
+                    <label>Username or Email</label>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="loginPassword" required placeholder=" ">
+                    <label>Password</label>
+                </div>
+                <button type="submit" class="btn-submit">Login</button>
+                <p id="loginError" class="error-msg"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="registerModal" class="modal">
+        <div class="modal-content glass-card register-content">
+            <span class="close" onclick="closeModal('registerModal')">&times;</span>
+            <h2>Create Account</h2>
+            <p>Join our platform today</p>
+            <form id="registerForm">
+                <div class="role-selector">
+                    <label>
+                        <input type="radio" name="role" value="STUDENT" checked> Student
+                    </label>
+                    <label>
+                        <input type="radio" name="role" value="TEACHER"> Teacher
+                    </label>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="input-group">
+                        <input type="text" id="regFullName" required placeholder=" ">
+                        <label>Full Name</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="regUsername" required placeholder=" ">
+                        <label>Username</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="email" id="regEmail" required placeholder=" ">
+                        <label>Email Address</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="regPassword" required placeholder=" ">
+                        <label>Password</label>
+                    </div>
+                    
+                    <!-- Dynamic fields based on role -->
+                    <div class="input-group student-only">
+                        <input type="text" id="regDepartment" placeholder=" ">
+                        <label>Department</label>
+                    </div>
+                    <div class="input-group student-only">
+                        <input type="text" id="regSemester" placeholder=" ">
+                        <label>Semester</label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-submit">Sign Up</button>
+                <p id="regError" class="error-msg"></p>
+                <p id="regSuccess" class="success-msg"></p>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

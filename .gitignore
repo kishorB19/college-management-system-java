@@ -1,0 +1,10 @@
+target/
+*.jar
+*.war
+maven.zip
+apache-maven-*/
+.idea/
+*.iml
+.vscode/
+.DS_Store
+*.log
