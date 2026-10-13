@@ -42,6 +42,7 @@ public class User {
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters")
     @Column(nullable = false)
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     @NotBlank(message = "Full name is required")
@@ -55,6 +56,7 @@ public class User {
     @Column(name = "phone_number")
     private String phoneNumber;
 
+    @Builder.Default
     private boolean enabled = true;
 
     @CreationTimestamp

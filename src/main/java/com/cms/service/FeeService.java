@@ -87,6 +87,19 @@ public class FeeService {
     }
 
     @Transactional
+    public FeeRecord payFee(Long id) {
+        FeeRecord record = feeRecordRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("FeeRecord", "id", id));
+        record.setAmountPaid(record.getAmount());
+        record.setBalanceDue(0.0);
+        record.setStatus(FeeStatus.PAID);
+        record.setPaymentDate(java.time.LocalDate.now());
+        record.setTransactionId("TXN-" + System.currentTimeMillis());
+        record.setRemarks("Paid online via student portal");
+        return feeRecordRepository.save(record);
+    }
+
+    @Transactional
     public void deleteFeeRecord(Long id) {
         FeeRecord record = feeRecordRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FeeRecord", "id", id));

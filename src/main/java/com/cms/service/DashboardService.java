@@ -37,16 +37,18 @@ public class DashboardService {
      */
     public DashboardStats getStudentDashboard(Long studentId) {
         Student student = studentRepository.findById(studentId)
+                .or(() -> studentRepository.findByUserId(studentId))
                 .orElseThrow(() -> new ResourceNotFoundException("Student", "id", studentId));
 
-        double attendancePercentage = attendanceService.getAttendancePercentage(studentId);
-        long pendingAssignments = submissionRepository.countByStudentIdAndStatus(studentId, AssignmentStatus.PENDING);
-        long submittedAssignments = submissionRepository.countByStudentId(studentId);
-        long pendingLeaves = leaveRequestRepository.countByStudentIdAndStatus(studentId, LeaveStatus.PENDING);
+        Long actualStudentId = student.getId();
+        double attendancePercentage = attendanceService.getAttendancePercentage(actualStudentId);
+        long pendingAssignments = submissionRepository.countByStudentIdAndStatus(actualStudentId, AssignmentStatus.PENDING);
+        long submittedAssignments = submissionRepository.countByStudentId(actualStudentId);
+        long pendingLeaves = leaveRequestRepository.countByStudentIdAndStatus(actualStudentId, LeaveStatus.PENDING);
 
-        Double totalFeesDue = feeRecordRepository.getTotalBalanceDueByStudentId(studentId);
-        Double totalFeesPaid = feeRecordRepository.getTotalAmountPaidByStudentId(studentId);
-        Double averageMarks = examResultRepository.getAveragePercentageByStudentId(studentId);
+        Double totalFeesDue = feeRecordRepository.getTotalBalanceDueByStudentId(actualStudentId);
+        Double totalFeesPaid = feeRecordRepository.getTotalAmountPaidByStudentId(actualStudentId);
+        Double averageMarks = examResultRepository.getAveragePercentageByStudentId(actualStudentId);
 
         return DashboardStats.builder()
                 .attendancePercentage(Math.round(attendancePercentage * 100.0) / 100.0)
@@ -64,10 +66,12 @@ public class DashboardService {
      */
     public DashboardStats getTeacherDashboard(Long teacherId) {
         Teacher teacher = teacherRepository.findById(teacherId)
+                .or(() -> teacherRepository.findByUserId(teacherId))
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher", "id", teacherId));
 
+        Long actualTeacherId = teacher.getId();
         long totalStudents = studentRepository.countByDepartment(teacher.getDepartment());
-        long totalAssignments = assignmentRepository.countByTeacherId(teacherId);
+        long totalAssignments = assignmentRepository.countByTeacherId(actualTeacherId);
         long pendingLeaves = leaveRequestRepository.countByStatus(LeaveStatus.PENDING);
 
         return DashboardStats.builder()
