@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - EduTrack</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .dashboard-container {
+            padding: 2rem 5%;
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 2rem;
+            min-height: calc(100vh - 80px);
+        }
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .nav-item {
+            padding: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: var(--glass-bg);
+            border: 1px solid transparent;
+        }
+        .nav-item:hover, .nav-item.active {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .stat-card h3 { font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem; }
+        .stat-card p { color: var(--text-muted); }
+        .content-panel { display: none; }
+        .content-panel.active { display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--glass-border); }
+        th { color: var(--primary); }
+    </style>
+</head>
+<body>
+    <div class="blob-c"><div class="shape-blob"></div><div class="shape-blob one"></div></div>
+    
+    <header class="glass-header">
+        <div class="logo"><h1>Edu<span>Track</span></h1></div>
+        <nav>
+            <ul>
+                <li><span id="userNameDisplay">Welcome, Student</span></li>
+                <li><button class="btn-secondary" onclick="logout()">Logout</button></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="dashboard-container">
+        <aside class="sidebar glass-card">
+            <div class="nav-item active" onclick="switchTab('overview')">Overview</div>
+            <div class="nav-item" onclick="switchTab('attendance')">Attendance</div>
+            <div class="nav-item" onclick="switchTab('results')">Exam Results</div>
+            <div class="nav-item" onclick="switchTab('fees')">Fee Records</div>
+            <div class="nav-item" onclick="switchTab('assignments')">Assignments</div>
+        </aside>
+
+        <main class="main-content glass-card" style="padding: 2rem;">
+            <div id="overview" class="content-panel active">
+                <h2>Dashboard Overview</h2>
+                <div class="stats-grid" style="margin-top: 2rem;" id="statsContainer">
+                    Loading stats...
+                </div>
+            </div>
+
+            <div id="attendance" class="content-panel">
+                <h2>Attendance Records</h2>
+                <table id="attendanceTable">
+                    <thead><tr><th>Subject</th><th>Date</th><th>Status</th><th>Remarks</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div id="results" class="content-panel">
+                <h2>Exam Results</h2>
+                <table id="resultsTable">
+                    <thead><tr><th>Subject</th><th>Type</th><th>Semester</th><th>Marks</th><th>Grade</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div id="fees" class="content-panel">
+                <h2>Fee Records</h2>
+                <table id="feesTable">
+                    <thead><tr><th>Fee Type</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div id="assignments" class="content-panel">
+                <h2>My Assignments</h2>
+                <table id="assignmentsTable">
+                    <thead><tr><th>ID</th><th>Status</th><th>Marks</th><th>Feedback</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
