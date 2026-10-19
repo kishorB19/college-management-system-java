@@ -18,7 +18,12 @@ import {
   Search,
   Filter,
   Sparkles,
-  ClipboardList
+  ClipboardList,
+  Bell,
+  CheckCheck,
+  Clock,
+  Check,
+  X
 } from 'lucide-react';
 
 export default function TeacherDashboard() {
@@ -39,6 +44,24 @@ export default function TeacherDashboard() {
   const [students, setStudents] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [pendingLeaves, setPendingLeaves] = useState([]);
+  const [notices, setNotices] = useState([]);
+
+  // Batch Attendance State
+  const [classAttSubject, setClassAttSubject] = useState('Software Engineering');
+  const [classAttDate, setClassAttDate] = useState(new Date().toISOString().split('T')[0]);
+  const [classRosterAttendance, setClassRosterAttendance] = useState({});
+  const [savingBatchAtt, setSavingBatchAtt] = useState(false);
+
+  // Notices Form
+  const [showCreateNoticeModal, setShowCreateNoticeModal] = useState(false);
+  const [noticeForm, setNoticeForm] = useState({
+    title: '',
+    category: 'ACADEMIC',
+    priority: 'GENERAL',
+    targetAudience: 'Semester 4 Students',
+    content: '',
+  });
+  const [postingNotice, setPostingNotice] = useState(false);
 
   // Filter state for students
   const [selectedDept, setSelectedDept] = useState('');
@@ -71,16 +94,6 @@ export default function TeacherDashboard() {
   const [gradeForm, setGradeForm] = useState({ marksObtained: 90, feedback: 'Well done!' });
   const [grading, setGrading] = useState(false);
 
-  // Attendance Marking Form
-  const [attForm, setAttForm] = useState({
-    studentId: '',
-    subject: 'Software Engineering',
-    date: new Date().toISOString().split('T')[0],
-    status: 'PRESENT',
-    remarks: 'Active participation',
-  });
-  const [markingAtt, setMarkingAtt] = useState(false);
-
   // Results Posting Form
   const [resultForm, setResultForm] = useState({
     studentId: '',
@@ -106,12 +119,13 @@ export default function TeacherDashboard() {
     setLoading(true);
 
     try {
-      const [statsRes, profRes, studRes, asgRes, leavesRes] = await Promise.allSettled([
+      const [statsRes, profRes, studRes, asgRes, leavesRes, noticesRes] = await Promise.allSettled([
         api.getTeacherDashboard(teacherId),
         api.getTeacherProfile(teacherId),
         api.getStudents(),
         api.getTeacherAssignments(teacherId),
         api.getPendingLeaves(),
+        api.getNotices(),
       ]);
 
       if (statsRes.status === 'fulfilled' && statsRes.value?.success && statsRes.value.data) {
@@ -124,8 +138,12 @@ export default function TeacherDashboard() {
         const studentList = Array.isArray(studRes.value.data) ? studRes.value.data : [];
         setStudents(studentList);
         if (studentList.length > 0) {
-          setAttForm((prev) => ({ ...prev, studentId: studentList[0].id }));
           setResultForm((prev) => ({ ...prev, studentId: studentList[0].id }));
+          const initialRoster = {};
+          studentList.forEach((st) => {
+            initialRoster[st.id] = { status: 'PRESENT', remarks: 'Present in lecture' };
+          });
+          setClassRosterAttendance(initialRoster);
         }
       }
       if (asgRes.status === 'fulfilled' && asgRes.value?.success) {
@@ -133,6 +151,9 @@ export default function TeacherDashboard() {
       }
       if (leavesRes.status === 'fulfilled' && leavesRes.value?.success) {
         setPendingLeaves(Array.isArray(leavesRes.value.data) ? leavesRes.value.data : []);
+      }
+      if (noticesRes.status === 'fulfilled' && noticesRes.value?.success) {
+        setNotices(Array.isArray(noticesRes.value.data) ? noticesRes.value.data : []);
       }
     } finally {
       setLoading(false);
@@ -153,7 +174,102 @@ export default function TeacherDashboard() {
     }
   };
 
-  // Mark Attendance Submit
+  // Batch Attendance: Mark All Students to a status
+  const handleMarkAll = (status) => {
+    setClassRosterAttendance((prev) => {
+      const next = { ...prev };
+      students.forEach((st) => {
+        next[st.id] = {
+          status,
+          remarks: next[st.id]?.remarks || (status === 'PRESENT' ? 'Present for lecture' : status === 'LATE' ? 'Late arrival' : 'Absent'),
+        };
+      });
+      return next;
+    });
+  };
+
+  // Batch Attendance: Toggle single student status
+  const handleStudentStatus = (studentId, status) => {
+    setClassRosterAttendance((prev) => ({
+      ...prev,
+      [studentId]: {
+        status,
+        remarks: prev[studentId]?.remarks || (status === 'PRESENT' ? 'Present for lecture' : status === 'LATE' ? 'Late arrival' : 'Absent'),
+      },
+    }));
+  };
+
+  // Batch Attendance: Update student remark
+  const handleStudentRemarks = (studentId, remarks) => {
+    setClassRosterAttendance((prev) => ({
+      ...prev,
+      [studentId]: {
+        status: prev[studentId]?.status || 'PRESENT',
+        remarks,
+      },
+    }));
+  };
+
+  // Batch Attendance: Save entire class attendance
+  const handleSaveClassAttendance = async (e) => {
+    if (e) e.preventDefault();
+    if (students.length === 0) return;
+    setSavingBatchAtt(true);
+    try {
+      const records = students.map((st) => ({
+        studentId: Number(st.id),
+        subject: classAttSubject,
+        date: classAttDate,
+        status: classRosterAttendance[st.id]?.status || 'PRESENT',
+        remarks: classRosterAttendance[st.id]?.remarks || 'Present for lecture',
+      }));
+
+      const res = await api.markAttendanceBatch(records);
+      if (res.success) {
+        showNotification(res.message || `Class attendance saved for ${records.length} students!`);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to save class attendance');
+    } finally {
+      setSavingBatchAtt(false);
+    }
+  };
+
+  // Publish Announcement / Notice
+  const handleCreateNotice = async (e) => {
+    e.preventDefault();
+    setPostingNotice(true);
+    try {
+      const res = await api.createNotice({
+        title: noticeForm.title,
+        category: noticeForm.category,
+        priority: noticeForm.priority,
+        targetAudience: noticeForm.targetAudience,
+        content: noticeForm.content,
+        author: user?.fullName || 'Dr. Rajesh Sharma',
+        authorRole: 'FACULTY',
+      });
+      if (res.success) {
+        showNotification('Notice published to campus bulletin!');
+        setShowCreateNoticeModal(false);
+        setNoticeForm({
+          title: '',
+          category: 'ACADEMIC',
+          priority: 'GENERAL',
+          targetAudience: 'Semester 4 Students',
+          content: '',
+        });
+        const updated = await api.getNotices();
+        if (updated?.success) setNotices(updated.data);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to publish notice');
+    } finally {
+      setPostingNotice(false);
+    }
+  };
+
+  // Mark Single Attendance (Fallback)
   const handleMarkAttendance = async (e) => {
     e.preventDefault();
     setMarkingAtt(true);
@@ -406,7 +522,7 @@ export default function TeacherDashboard() {
           className={`tab-link ${activeTab === 'attendance' ? 'active' : ''}`}
           onClick={() => setActiveTab('attendance')}
         >
-          <CalendarCheck size={16} /> Mark Attendance
+          <CalendarCheck size={16} /> Class Attendance
         </button>
         <button
           className={`tab-link ${activeTab === 'results' ? 'active' : ''}`}
@@ -425,6 +541,12 @@ export default function TeacherDashboard() {
           onClick={() => setActiveTab('leaves')}
         >
           <Send size={16} /> Student Leaves ({pendingLeaves.length})
+        </button>
+        <button
+          className={`tab-link ${activeTab === 'notices' ? 'active' : ''}`}
+          onClick={() => setActiveTab('notices')}
+        >
+          <Bell size={16} /> Notice Board ({notices.length})
         </button>
         <button
           className={`tab-link ${activeTab === 'profile' ? 'active' : ''}`}
@@ -569,7 +691,7 @@ export default function TeacherDashboard() {
                     students.map((st) => (
                       <tr key={st.id}>
                         <td><strong className="mono-text">{st.rollNumber}</strong></td>
-                        <td>{st.user?.fullName || 'Alice Walker'}</td>
+                        <td>{st.fullName || st.user?.fullName || 'Kishor Birajdar'}</td>
                         <td>{st.department}</td>
                         <td>{st.semester}</td>
                         <td><span className="badge badge-info">{st.section || 'A'}</span></td>
@@ -578,7 +700,6 @@ export default function TeacherDashboard() {
                           <button 
                             className="btn btn-secondary btn-sm"
                             onClick={() => {
-                              setAttForm((prev) => ({ ...prev, studentId: st.id }));
                               setActiveTab('attendance');
                             }}
                           >
@@ -598,95 +719,235 @@ export default function TeacherDashboard() {
           </div>
         )}
 
-        {/* 3. MARK ATTENDANCE */}
-        {activeTab === 'attendance' && (
-          <div className="glass-panel tab-panel form-standalone-panel">
-            <div className="panel-header">
-              <div>
-                <h2>Record Daily Class Attendance</h2>
-                <p className="panel-desc">Log individual student presence and lecture participation</p>
-              </div>
-            </div>
+        {/* 3. CLASS ATTENDANCE REGISTER */}
+        {activeTab === 'attendance' && (() => {
+          const totalCount = students.length;
+          let presentCount = 0;
+          let lateCount = 0;
+          let absentCount = 0;
+          let excusedCount = 0;
 
-            <form onSubmit={handleMarkAttendance} className="custom-form-body">
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Select Student</label>
-                  <select
-                    className="form-select"
-                    required
-                    value={attForm.studentId}
-                    onChange={(e) => setAttForm({ ...attForm, studentId: e.target.value })}
-                  >
-                    {students.map((st) => (
-                      <option key={st.id} value={st.id}>
-                        {st.rollNumber} - {st.user?.fullName || 'Student'} ({st.semester})
-                      </option>
-                    ))}
-                  </select>
+          students.forEach((st) => {
+            const stat = classRosterAttendance[st.id]?.status || 'PRESENT';
+            if (stat === 'PRESENT') presentCount++;
+            else if (stat === 'LATE') lateCount++;
+            else if (stat === 'ABSENT') absentCount++;
+            else if (stat === 'EXCUSED') excusedCount++;
+          });
+
+          const attRate = totalCount > 0 ? Math.round(((presentCount + (lateCount * 0.5)) / totalCount) * 100) : 100;
+
+          return (
+            <div className="glass-panel tab-panel attendance-register-panel">
+              <div className="panel-header att-header-flex">
+                <div>
+                  <h2>Class Attendance Register</h2>
+                  <p className="panel-desc">
+                    Mark full class attendance in seconds with one-click presets and individual toggle switches.
+                  </p>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Subject</label>
+                <div className="att-top-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleSaveClassAttendance}
+                    disabled={savingBatchAtt || totalCount === 0}
+                  >
+                    <CheckCheck size={16} />
+                    {savingBatchAtt ? 'Saving Roster...' : `Save Class Attendance (${totalCount} Students)`}
+                  </button>
+                </div>
+              </div>
+
+              {/* Attendance Controls Bar */}
+              <div className="att-controls-bar glass-panel">
+                <div className="att-input-group">
+                  <label className="att-control-label">Subject / Lecture</label>
                   <input
                     type="text"
-                    required
-                    className="form-input"
-                    value={attForm.subject}
-                    onChange={(e) => setAttForm({ ...attForm, subject: e.target.value })}
+                    className="form-input att-input"
+                    value={classAttSubject}
+                    onChange={(e) => setClassAttSubject(e.target.value)}
+                    placeholder="e.g. Software Engineering"
                   />
                 </div>
-              </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Attendance Date</label>
+                <div className="att-input-group">
+                  <label className="att-control-label">Lecture Date</label>
                   <input
                     type="date"
-                    required
-                    className="form-input"
-                    value={attForm.date}
-                    onChange={(e) => setAttForm({ ...attForm, date: e.target.value })}
+                    className="form-input att-input"
+                    value={classAttDate}
+                    onChange={(e) => setClassAttDate(e.target.value)}
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Status</label>
-                  <select
-                    className="form-select"
-                    value={attForm.status}
-                    onChange={(e) => setAttForm({ ...attForm, status: e.target.value })}
-                  >
-                    <option value="PRESENT">PRESENT</option>
-                    <option value="ABSENT">ABSENT</option>
-                    <option value="LATE">LATE</option>
-                    <option value="EXCUSED">EXCUSED</option>
-                  </select>
+                <div className="att-batch-actions-group">
+                  <span className="att-control-label">Batch Quick Presets:</span>
+                  <div className="att-preset-buttons">
+                    <button
+                      type="button"
+                      className="btn btn-preset preset-present"
+                      onClick={() => handleMarkAll('PRESENT')}
+                      title="Set all students to Present"
+                    >
+                      <Check size={14} /> All Present
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-preset preset-late"
+                      onClick={() => handleMarkAll('LATE')}
+                      title="Set all students to Late"
+                    >
+                      <Clock size={14} /> All Late
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-preset preset-absent"
+                      onClick={() => handleMarkAll('ABSENT')}
+                      title="Set all students to Absent"
+                    >
+                      <X size={14} /> All Absent
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Session Remarks</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Lab experiment attendance"
-                  value={attForm.remarks}
-                  onChange={(e) => setAttForm({ ...attForm, remarks: e.target.value })}
-                />
+              {/* Class Statistics Chips */}
+              <div className="att-stats-summary-bar">
+                <div className="att-stat-chip chip-total">
+                  <span className="chip-label">Total Enrolled:</span>
+                  <strong className="chip-value">{totalCount}</strong>
+                </div>
+                <div className="att-stat-chip chip-present">
+                  <span className="chip-dot dot-present"></span>
+                  <span className="chip-label">Present:</span>
+                  <strong className="chip-value">{presentCount}</strong>
+                </div>
+                <div className="att-stat-chip chip-late">
+                  <span className="chip-dot dot-late"></span>
+                  <span className="chip-label">Late:</span>
+                  <strong className="chip-value">{lateCount}</strong>
+                </div>
+                <div className="att-stat-chip chip-absent">
+                  <span className="chip-dot dot-absent"></span>
+                  <span className="chip-label">Absent:</span>
+                  <strong className="chip-value">{absentCount}</strong>
+                </div>
+                <div className="att-stat-chip chip-rate">
+                  <span className="chip-label">Attendance Rate:</span>
+                  <strong className="chip-value">{attRate}%</strong>
+                </div>
               </div>
 
-              <button 
-                type="submit" 
-                className="btn btn-primary"
-                disabled={markingAtt}
-              >
-                <CalendarCheck size={16} />
-                {markingAtt ? 'Recording...' : 'Save Attendance Record'}
-              </button>
-            </form>
-          </div>
-        )}
+              {/* Student Attendance Roster Table */}
+              <div className="table-container att-table-container">
+                <table className="custom-table att-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '130px' }}>Roll Number</th>
+                      <th style={{ minWidth: '180px' }}>Student Name</th>
+                      <th style={{ width: '120px' }}>Semester</th>
+                      <th style={{ minWidth: '280px' }}>Attendance Status</th>
+                      <th style={{ minWidth: '220px' }}>Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students.length > 0 ? (
+                      students.map((st) => {
+                        const currentStatus = classRosterAttendance[st.id]?.status || 'PRESENT';
+                        const currentRemarks = classRosterAttendance[st.id]?.remarks || '';
+
+                        return (
+                          <tr key={st.id} className={`roster-row status-${currentStatus.toLowerCase()}`}>
+                            <td>
+                              <strong className="mono-text">{st.rollNumber}</strong>
+                            </td>
+                            <td>
+                              <div className="student-roster-name">
+                                <strong>{st.fullName || st.user?.fullName || 'Kishor Birajdar'}</strong>
+                                <span className="student-roster-sub">
+                                  {st.department || 'Computer Science'} &bull; Sec {st.section || 'A'}
+                                </span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="badge badge-info">{st.semester || 'Semester 4'}</span>
+                            </td>
+                            <td>
+                              <div className="att-status-button-group">
+                                <button
+                                  type="button"
+                                  className={`att-pill-btn pill-present ${currentStatus === 'PRESENT' ? 'active' : ''}`}
+                                  onClick={() => handleStudentStatus(st.id, 'PRESENT')}
+                                >
+                                  <Check size={13} /> Present
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`att-pill-btn pill-late ${currentStatus === 'LATE' ? 'active' : ''}`}
+                                  onClick={() => handleStudentStatus(st.id, 'LATE')}
+                                >
+                                  <Clock size={13} /> Late
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`att-pill-btn pill-absent ${currentStatus === 'ABSENT' ? 'active' : ''}`}
+                                  onClick={() => handleStudentStatus(st.id, 'ABSENT')}
+                                >
+                                  <X size={13} /> Absent
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`att-pill-btn pill-excused ${currentStatus === 'EXCUSED' ? 'active' : ''}`}
+                                  onClick={() => handleStudentStatus(st.id, 'EXCUSED')}
+                                >
+                                  Excused
+                                </button>
+                              </div>
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                className="form-input att-remark-input"
+                                placeholder="Optional remarks..."
+                                value={currentRemarks}
+                                onChange={(e) => handleStudentRemarks(st.id, e.target.value)}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="text-center empty-row">
+                          No enrolled students found to mark attendance.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Bottom Quick Save Footer */}
+              <div className="att-footer-action-bar">
+                <span className="att-footer-hint">
+                  Make your selections above, then click save to update all student records simultaneously.
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleSaveClassAttendance}
+                  disabled={savingBatchAtt || totalCount === 0}
+                >
+                  <CheckCheck size={16} />
+                  {savingBatchAtt ? 'Saving Class Attendance...' : `Save Class Attendance (${totalCount} Students)`}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 4. POST EXAM SCORES */}
         {activeTab === 'results' && (
@@ -938,6 +1199,60 @@ export default function TeacherDashboard() {
           </div>
         )}
 
+        {/* 6. NOTICE BOARD */}
+        {activeTab === 'notices' && (
+          <div className="glass-panel tab-panel">
+            <div className="panel-header">
+              <div>
+                <h2>Campus Notice Board &amp; Announcements</h2>
+                <p className="panel-desc">Broadcast academic circulars, exam schedules, and holiday notifications to students</p>
+              </div>
+
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowCreateNoticeModal(true)}
+              >
+                <PlusCircle size={15} /> Post Announcement
+              </button>
+            </div>
+
+            <div className="notices-grid">
+              {notices.length > 0 ? (
+                notices.map((notice) => (
+                  <div key={notice.id} className="notice-card glass-panel">
+                    <div className="notice-card-top">
+                      <div className="notice-badge-group">
+                        <span className={`badge ${
+                          notice.priority === 'URGENT' ? 'badge-danger' :
+                          notice.priority === 'IMPORTANT' ? 'badge-warning' : 'badge-info'
+                        }`}>
+                          {notice.priority}
+                        </span>
+                        <span className="badge badge-secondary">{notice.category}</span>
+                      </div>
+                      <span className="notice-timestamp"><Clock size={13} /> {notice.date}</span>
+                    </div>
+
+                    <h3 className="notice-item-title">{notice.title}</h3>
+                    <p className="notice-item-desc">{notice.content}</p>
+
+                    <div className="notice-meta-bottom">
+                      <span className="notice-author-name">Issued by: <strong>{notice.author}</strong></span>
+                      {notice.targetAudience && (
+                        <span className="notice-target-badge">For: {notice.targetAudience}</span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center empty-row" style={{ padding: '36px' }}>
+                  No announcements published yet. Click "Post Announcement" to broadcast to students.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 7. PROFILE */}
         {activeTab === 'profile' && (
           <div className="glass-panel tab-panel profile-panel">
@@ -951,7 +1266,7 @@ export default function TeacherDashboard() {
             <div className="profile-grid">
               <div className="profile-item">
                 <span className="p-label">Faculty Member</span>
-                <span className="p-value">{user?.fullName || 'Dr. Alan Turing'}</span>
+                <span className="p-value">{user?.fullName || 'Dr. Rajesh Sharma'}</span>
               </div>
               <div className="profile-item">
                 <span className="p-label">Employee ID</span>
@@ -1131,7 +1446,7 @@ export default function TeacherDashboard() {
                     asgSubmissions.map((sub) => (
                       <tr key={sub.id}>
                         <td>
-                          <strong>{sub.student?.user?.fullName || 'Alice Walker'}</strong>
+                          <strong>{sub.student?.user?.fullName || 'Kishor Birajdar'}</strong>
                           <p className="table-subtext">Roll: {sub.student?.rollNumber}</p>
                         </td>
                         <td>
@@ -1202,7 +1517,7 @@ export default function TeacherDashboard() {
             </div>
 
             <div className="modal-assignment-info">
-              <h4>Student: {selectedSub.student?.user?.fullName || 'Alice'}</h4>
+              <h4>Student: {selectedSub.student?.user?.fullName || 'Kishor Birajdar'}</h4>
               <p>"{selectedSub.content}"</p>
             </div>
 
@@ -1244,6 +1559,112 @@ export default function TeacherDashboard() {
                   disabled={grading}
                 >
                   {grading ? 'Recording...' : 'Submit Evaluation'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Create Notice / Announcement */}
+      {showCreateNoticeModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateNoticeModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                <Bell size={20} /> Publish Campus Announcement
+              </h3>
+              <button 
+                type="button" 
+                className="modal-close-btn"
+                onClick={() => setShowCreateNoticeModal(false)}
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNotice}>
+              <div className="form-group">
+                <label className="form-label">Announcement Title</label>
+                <input
+                  type="text"
+                  required
+                  className="form-input"
+                  placeholder="e.g. Mid-Term Examination Schedule Released"
+                  value={noticeForm.title}
+                  onChange={(e) => setNoticeForm({ ...noticeForm, title: e.target.value })}
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Category</label>
+                  <select
+                    className="form-select"
+                    value={noticeForm.category}
+                    onChange={(e) => setNoticeForm({ ...noticeForm, category: e.target.value })}
+                  >
+                    <option value="ACADEMIC">ACADEMIC</option>
+                    <option value="EXAMINATION">EXAMINATION</option>
+                    <option value="HOLIDAY">HOLIDAY</option>
+                    <option value="EVENT">EVENT</option>
+                    <option value="PLACEMENT">PLACEMENT</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Priority</label>
+                  <select
+                    className="form-select"
+                    value={noticeForm.priority}
+                    onChange={(e) => setNoticeForm({ ...noticeForm, priority: e.target.value })}
+                  >
+                    <option value="GENERAL">GENERAL</option>
+                    <option value="IMPORTANT">IMPORTANT</option>
+                    <option value="URGENT">URGENT</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Target Audience</label>
+                <input
+                  type="text"
+                  required
+                  className="form-input"
+                  placeholder="e.g. All Students & Faculty, or Semester 4"
+                  value={noticeForm.targetAudience}
+                  onChange={(e) => setNoticeForm({ ...noticeForm, targetAudience: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Announcement Details / Message</label>
+                <textarea
+                  rows={4}
+                  required
+                  className="form-textarea"
+                  placeholder="Provide complete notice details, guidelines, or instructions..."
+                  value={noticeForm.content}
+                  onChange={(e) => setNoticeForm({ ...noticeForm, content: e.target.value })}
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => setShowCreateNoticeModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={postingNotice}
+                >
+                  <Send size={15} />
+                  {postingNotice ? 'Publishing...' : 'Broadcast Announcement'}
                 </button>
               </div>
             </form>
@@ -1614,6 +2035,267 @@ export default function TeacherDashboard() {
         .p-value.highlight {
           color: var(--accent-secondary);
           font-family: var(--font-mono);
+        }
+
+        /* Attendance Register Styles */
+        .attendance-register-panel {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
+        .att-header-flex {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 16px;
+        }
+        .att-controls-bar {
+          display: flex;
+          align-items: flex-end;
+          gap: 16px;
+          padding: 16px 20px;
+          flex-wrap: wrap;
+          background: rgba(15, 23, 42, 0.7);
+        }
+        .att-input-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          flex: 1;
+          min-width: 180px;
+        }
+        .att-control-label {
+          font-size: 0.75rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: var(--text-muted);
+        }
+        .att-input {
+          padding: 8px 12px;
+          font-size: 0.875rem;
+        }
+        .att-batch-actions-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .att-preset-buttons {
+          display: flex;
+          gap: 8px;
+        }
+        .btn-preset {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 12px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          border-radius: 8px;
+          border: 1px solid var(--border-subtle);
+          background: rgba(255, 255, 255, 0.04);
+          color: var(--text-main);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .btn-preset:hover {
+          transform: translateY(-1px);
+        }
+        .preset-present:hover {
+          background: rgba(16, 185, 129, 0.2);
+          border-color: #10b981;
+          color: #34d399;
+        }
+        .preset-late:hover {
+          background: rgba(245, 158, 11, 0.2);
+          border-color: #f59e0b;
+          color: #fbbf24;
+        }
+        .preset-absent:hover {
+          background: rgba(239, 68, 68, 0.2);
+          border-color: #ef4444;
+          color: #f87171;
+        }
+
+        /* Attendance Stats Chips */
+        .att-stats-summary-bar {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .att-stat-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 14px;
+          background: rgba(20, 27, 45, 0.6);
+          border: 1px solid var(--border-subtle);
+          border-radius: 20px;
+          font-size: 0.8rem;
+        }
+        .chip-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+        }
+        .dot-present { background: #10b981; }
+        .dot-late { background: #f59e0b; }
+        .dot-absent { background: #ef4444; }
+        .chip-label { color: var(--text-muted); }
+        .chip-value { font-weight: 700; color: var(--text-main); }
+        .chip-rate { border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.1); }
+        .chip-rate .chip-value { color: #38bdf8; }
+
+        /* Attendance Roster Table */
+        .att-table-container {
+          margin-top: 4px;
+        }
+        .student-roster-name {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .student-roster-sub {
+          font-size: 0.75rem;
+          color: var(--text-muted);
+        }
+        .att-status-button-group {
+          display: inline-flex;
+          background: rgba(15, 23, 42, 0.8);
+          padding: 3px;
+          border-radius: 10px;
+          border: 1px solid var(--border-subtle);
+          gap: 2px;
+        }
+        .att-pill-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 6px 10px;
+          border-radius: 7px;
+          border: none;
+          background: transparent;
+          color: var(--text-muted);
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.18s ease;
+        }
+        .att-pill-btn:hover {
+          color: var(--text-main);
+          background: rgba(255, 255, 255, 0.05);
+        }
+        .att-pill-btn.pill-present.active {
+          background: #10b981;
+          color: #ffffff;
+          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+        }
+        .att-pill-btn.pill-late.active {
+          background: #f59e0b;
+          color: #ffffff;
+          box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+        }
+        .att-pill-btn.pill-absent.active {
+          background: #ef4444;
+          color: #ffffff;
+          box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+        }
+        .att-pill-btn.pill-excused.active {
+          background: #6b7280;
+          color: #ffffff;
+        }
+        .att-remark-input {
+          padding: 6px 10px;
+          font-size: 0.8rem;
+          width: 100%;
+        }
+        .att-footer-action-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 20px;
+          background: rgba(15, 23, 42, 0.7);
+          border-radius: 12px;
+          border: 1px solid var(--border-subtle);
+          margin-top: 8px;
+          flex-wrap: wrap;
+          gap: 14px;
+        }
+        .att-footer-hint {
+          font-size: 0.825rem;
+          color: var(--text-muted);
+        }
+
+        /* Notices Grid & Card */
+        .notices-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          gap: 16px;
+          margin-top: 16px;
+        }
+        .notice-card {
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .notice-card:hover {
+          transform: translateY(-2px);
+          border-color: rgba(56, 189, 248, 0.4);
+        }
+        .notice-card-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .notice-badge-group {
+          display: flex;
+          gap: 6px;
+        }
+        .notice-timestamp {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.75rem;
+          color: var(--text-muted);
+        }
+        .notice-item-title {
+          font-size: 1.05rem;
+          font-weight: 700;
+          color: var(--text-main);
+          margin: 0;
+          line-height: 1.35;
+        }
+        .notice-item-desc {
+          font-size: 0.85rem;
+          color: var(--text-muted);
+          line-height: 1.5;
+          margin: 0;
+          flex: 1;
+        }
+        .notice-meta-bottom {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-top: 10px;
+          border-top: 1px solid var(--border-subtle);
+          font-size: 0.75rem;
+        }
+        .notice-author-name {
+          color: var(--text-muted);
+        }
+        .notice-author-name strong {
+          color: var(--text-main);
+        }
+        .notice-target-badge {
+          background: rgba(255, 255, 255, 0.05);
+          padding: 2px 8px;
+          border-radius: 12px;
+          color: #38bdf8;
+          font-size: 0.7rem;
         }
       `}</style>
     </div>

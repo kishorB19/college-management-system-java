@@ -4,11 +4,9 @@ import Navbar from './components/Navbar';
 import AuthPage from './components/auth/AuthPage';
 import StudentDashboard from './components/student/StudentDashboard';
 import TeacherDashboard from './components/teacher/TeacherDashboard';
-import AdminDashboard from './components/admin/AdminDashboard';
-import { Database, ShieldCheck, Heart } from 'lucide-react';
 
 function AppContent() {
-  const { isAuthenticated, isStudent, isTeacher, isAdmin } = useAuth();
+  const { isAuthenticated, isStudent } = useAuth();
 
   return (
     <div className="app-layout">
@@ -19,12 +17,8 @@ function AppContent() {
           <AuthPage />
         ) : isStudent ? (
           <StudentDashboard />
-        ) : isTeacher ? (
-          <TeacherDashboard />
-        ) : isAdmin ? (
-          <AdminDashboard />
         ) : (
-          <StudentDashboard />
+          <TeacherDashboard />
         )}
       </main>
 

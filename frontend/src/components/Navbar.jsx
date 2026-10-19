@@ -11,16 +11,9 @@ import {
 } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout, isTeacher, isStudent, isAdmin } = useAuth();
+  const { user, isAuthenticated, logout, isTeacher, isStudent } = useAuth();
 
   const getRoleBadge = () => {
-    if (isAdmin) {
-      return (
-        <span className="badge badge-danger">
-          <ShieldCheck size={12} /> Admin
-        </span>
-      );
-    }
     if (isTeacher) {
       return (
         <span className="badge badge-info">

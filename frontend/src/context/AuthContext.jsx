@@ -79,7 +79,6 @@ export function AuthProvider({ children }) {
     isAuthenticated: !!token && !!user,
     isStudent: user?.role === 'ROLE_STUDENT',
     isTeacher: user?.role === 'ROLE_TEACHER',
-    isAdmin: user?.role === 'ROLE_ADMIN',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

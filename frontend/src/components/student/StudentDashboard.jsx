@@ -14,10 +14,11 @@ import {
   AlertCircle,
   PlusCircle,
   ExternalLink,
-  DollarSign,
-  BookOpen,
-  Calendar,
-  Sparkles
+  IndianRupee,
+  Bell,
+  BookOpen, 
+  Calendar, 
+  Sparkles 
 } from 'lucide-react';
 
 export default function StudentDashboard() {
@@ -43,6 +44,8 @@ export default function StudentDashboard() {
   const [submissions, setSubmissions] = useState([]);
   const [availableAssignments, setAvailableAssignments] = useState([]);
   const [leaves, setLeaves] = useState([]);
+  const [notices, setNotices] = useState([]);
+  const [selectedNoticeCategory, setSelectedNoticeCategory] = useState('ALL');
 
   // Modals & Forms
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -52,7 +55,7 @@ export default function StudentDashboard() {
 
   // Leave Form
   const [leaveForm, setLeaveForm] = useState({
-    reason: 'Medical Leave',
+    reason: 'Academic Symposium Participation',
     description: '',
     startDate: '',
     endDate: '',
@@ -80,6 +83,7 @@ export default function StudentDashboard() {
         subRes,
         availRes,
         leaveRes,
+        noticesRes,
       ] = await Promise.allSettled([
         api.getStudentDashboard(studentId),
         api.getStudentProfile(studentId),
@@ -89,6 +93,7 @@ export default function StudentDashboard() {
         api.getStudentAssignments(studentId),
         api.getAvailableAssignments(studentId),
         api.getStudentLeaves(studentId),
+        api.getNotices(),
       ]);
 
       if (statsRes.status === 'fulfilled' && statsRes.value?.success && statsRes.value.data) {
@@ -114,6 +119,9 @@ export default function StudentDashboard() {
       }
       if (leaveRes.status === 'fulfilled' && leaveRes.value?.success) {
         setLeaves(Array.isArray(leaveRes.value.data) ? leaveRes.value.data : []);
+      }
+      if (noticesRes.status === 'fulfilled' && noticesRes.value?.success) {
+        setNotices(Array.isArray(noticesRes.value.data) ? noticesRes.value.data : []);
       }
     } catch (err) {
       setError('Failed to fetch some dashboard data.');
@@ -238,7 +246,7 @@ export default function StudentDashboard() {
           </div>
           <div className="pill-divider"></div>
           <div className="pill-item">
-            <span className="pill-val">${stats.totalFeesDue}</span>
+            <span className="pill-val">₹{stats.totalFeesDue?.toLocaleString('en-IN') || 0}</span>
             <span className="pill-label">Fees Due</span>
           </div>
         </div>
@@ -275,13 +283,13 @@ export default function StudentDashboard() {
 
         <div className="glass-panel stat-card stat-fees">
           <div className="stat-card-icon">
-            <CreditCard size={24} />
+            <IndianRupee size={24} />
           </div>
           <div className="stat-card-content">
-            <div className="stat-value">${stats.totalFeesDue}</div>
+            <div className="stat-value">₹{stats.totalFeesDue?.toLocaleString('en-IN') || 0}</div>
             <div className="stat-label">Balance Fees Due</div>
             <span className="stat-subtext">
-              {stats.totalFeesDue === 0 ? 'All cleared!' : 'Payable online'}
+              {stats.totalFeesDue === 0 ? 'All cleared!' : 'Payable online via UPI'}
             </span>
           </div>
         </div>
@@ -293,7 +301,7 @@ export default function StudentDashboard() {
           <div className="stat-card-content">
             <div className="stat-value">{stats.averageMarks}%</div>
             <div className="stat-label">Average Academic Score</div>
-            <span className="stat-subtext">Cumulative GPA: 3.8</span>
+            <span className="stat-subtext">Cumulative GPA: 3.9 / 4.0</span>
           </div>
         </div>
       </div>
@@ -305,6 +313,12 @@ export default function StudentDashboard() {
           onClick={() => setActiveTab('overview')}
         >
           <LayoutDashboard size={16} /> Overview
+        </button>
+        <button
+          className={`tab-link ${activeTab === 'notices' ? 'active' : ''}`}
+          onClick={() => setActiveTab('notices')}
+        >
+          <Bell size={16} /> Notice Board ({notices.length})
         </button>
         <button
           className={`tab-link ${activeTab === 'attendance' ? 'active' : ''}`}
@@ -322,7 +336,7 @@ export default function StudentDashboard() {
           className={`tab-link ${activeTab === 'fees' ? 'active' : ''}`}
           onClick={() => setActiveTab('fees')}
         >
-          <CreditCard size={16} /> Fee Records ({fees.length})
+          <IndianRupee size={16} /> Fee Records ({fees.length})
         </button>
         <button
           className={`tab-link ${activeTab === 'assignments' ? 'active' : ''}`}
@@ -396,8 +410,8 @@ export default function StudentDashboard() {
                       <div>
                         <strong>{fee.feeType}</strong>
                         <div className="cw-meta">
-                          <span>Amount: ${fee.amount}</span>
-                          <span>Paid: ${fee.amountPaid}</span>
+                          <span>Amount: ₹{fee.amount?.toLocaleString('en-IN')}</span>
+                          <span>Paid: ₹{fee.amountPaid?.toLocaleString('en-IN')}</span>
                         </div>
                       </div>
                       <div className="fee-action-col">
@@ -409,7 +423,7 @@ export default function StudentDashboard() {
                             className="btn btn-success btn-sm"
                             onClick={() => handlePayFee(fee.id)}
                           >
-                            Pay ${fee.balanceDue}
+                            Pay ₹{fee.balanceDue?.toLocaleString('en-IN')}
                           </button>
                         )}
                       </div>
@@ -540,7 +554,7 @@ export default function StudentDashboard() {
                 <p className="panel-desc">Manage semester tuition, library, and laboratory charges</p>
               </div>
               <div className="stat-pill-highlight">
-                Total Due: <strong>${stats.totalFeesDue}</strong>
+                Total Due: <strong>₹{stats.totalFeesDue?.toLocaleString('en-IN') || 0}</strong>
               </div>
             </div>
 
@@ -564,9 +578,9 @@ export default function StudentDashboard() {
                       <tr key={fee.id}>
                         <td><strong>{fee.feeType}</strong></td>
                         <td>{fee.semester || 'Semester 4'}</td>
-                        <td>${fee.amount}</td>
-                        <td>${fee.amountPaid}</td>
-                        <td><strong style={{ color: fee.balanceDue > 0 ? '#f87171' : '#34d399' }}>${fee.balanceDue}</strong></td>
+                        <td>₹{fee.amount?.toLocaleString('en-IN')}</td>
+                        <td>₹{fee.amountPaid?.toLocaleString('en-IN')}</td>
+                        <td><strong style={{ color: fee.balanceDue > 0 ? '#f87171' : '#34d399' }}>₹{fee.balanceDue?.toLocaleString('en-IN')}</strong></td>
                         <td>{fee.dueDate || 'N/A'}</td>
                         <td>
                           <span className={`badge ${
@@ -584,7 +598,7 @@ export default function StudentDashboard() {
                               className="btn btn-success btn-sm"
                               onClick={() => handlePayFee(fee.id)}
                             >
-                              <DollarSign size={13} /> Pay ${fee.balanceDue}
+                              <IndianRupee size={13} /> Pay ₹{fee.balanceDue?.toLocaleString('en-IN')}
                             </button>
                           )}
                         </td>
@@ -852,7 +866,7 @@ export default function StudentDashboard() {
             <div className="profile-grid">
               <div className="profile-item">
                 <span className="p-label">Full Name</span>
-                <span className="p-value">{user?.fullName || 'Alice Walker'}</span>
+                <span className="p-value">{user?.fullName || 'Kishor Birajdar'}</span>
               </div>
               <div className="profile-item">
                 <span className="p-label">Roll Number</span>
@@ -868,24 +882,78 @@ export default function StudentDashboard() {
               </div>
               <div className="profile-item">
                 <span className="p-label">Email Address</span>
-                <span className="p-value">{user?.email || 'student@cms.edu'}</span>
+                <span className="p-value">{user?.email || 'kishor.birajdar@cms.edu'}</span>
               </div>
               <div className="profile-item">
                 <span className="p-label">Institutional Contact</span>
-                <span className="p-value">{user?.phoneNumber || '+1-555-0102'}</span>
+                <span className="p-value">{user?.phoneNumber || '+91 98230 12345'}</span>
               </div>
               <div className="profile-item">
                 <span className="p-label">Guardian Name</span>
-                <span className="p-value">{profile?.guardianName || 'Robert Walker'}</span>
+                <span className="p-value">{profile?.guardianName || 'Suresh Birajdar'}</span>
               </div>
               <div className="profile-item">
                 <span className="p-label">Guardian Phone</span>
-                <span className="p-value">{profile?.guardianPhone || '+1-555-0199'}</span>
+                <span className="p-value">{profile?.guardianPhone || '+91 98765 43210'}</span>
               </div>
               <div className="profile-item full-width">
                 <span className="p-label">Residential Address</span>
-                <span className="p-value">{profile?.address || '42 Campus Avenue, Silicon Valley'}</span>
+                <span className="p-value">{profile?.address || '42 Shivaji Nagar, Pune, Maharashtra 411005'}</span>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 8. NOTICE BOARD TAB */}
+        {activeTab === 'notices' && (
+          <div className="glass-panel tab-panel">
+            <div className="panel-header">
+              <div>
+                <h2>Campus Notice Board &amp; Circulars</h2>
+                <p className="panel-desc">Official departmental announcements, examination schedules, and events</p>
+              </div>
+              <div className="notice-filter-pills">
+                {['ALL', 'EXAMINATION', 'HOLIDAY', 'EVENT', 'PLACEMENT'].map((cat) => (
+                  <button
+                    key={cat}
+                    className={`btn btn-sm ${selectedNoticeCategory === cat ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setSelectedNoticeCategory(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="notices-grid">
+              {notices
+                .filter((n) => selectedNoticeCategory === 'ALL' || n.category === selectedNoticeCategory)
+                .map((notice) => (
+                  <div key={notice.id} className="notice-card glass-panel">
+                    <div className="notice-card-top">
+                      <div className="notice-badge-group">
+                        <span className={`badge ${
+                          notice.priority === 'URGENT' ? 'badge-danger' :
+                          notice.priority === 'IMPORTANT' ? 'badge-warning' : 'badge-info'
+                        }`}>
+                          {notice.priority}
+                        </span>
+                        <span className="badge badge-secondary">{notice.category}</span>
+                      </div>
+                      <span className="notice-timestamp"><Clock size={13} /> {notice.date}</span>
+                    </div>
+
+                    <h3 className="notice-item-title">{notice.title}</h3>
+                    <p className="notice-item-desc">{notice.content}</p>
+
+                    <div className="notice-meta-bottom">
+                      <span className="notice-author-name">Issued by: <strong>{notice.author}</strong></span>
+                      {notice.targetAudience && (
+                        <span className="notice-target-badge">For: {notice.targetAudience}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
         )}
@@ -1333,6 +1401,80 @@ export default function StudentDashboard() {
           justify-content: flex-end;
           gap: 10px;
           margin-top: 20px;
+        }
+        .notice-filter-pills {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .notices-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+          gap: 18px;
+          margin-top: 16px;
+        }
+        .notice-card {
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          transition: transform 0.2s ease, border-color 0.2s ease;
+          border-left: 4px solid var(--accent-primary);
+        }
+        .notice-card:hover {
+          transform: translateY(-2px);
+          border-color: var(--accent-secondary);
+        }
+        .notice-card-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+        }
+        .notice-badge-group {
+          display: flex;
+          gap: 6px;
+          align-items: center;
+        }
+        .notice-timestamp {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.75rem;
+          color: var(--text-muted);
+        }
+        .notice-item-title {
+          font-size: 1.05rem;
+          font-weight: 700;
+          color: var(--text-main);
+          line-height: 1.35;
+        }
+        .notice-item-desc {
+          font-size: 0.875rem;
+          color: var(--text-secondary);
+          line-height: 1.55;
+          flex: 1;
+        }
+        .notice-meta-bottom {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+          padding-top: 10px;
+          border-top: 1px solid var(--border-subtle);
+          font-size: 0.775rem;
+          color: var(--text-muted);
+          flex-wrap: wrap;
+        }
+        .notice-author-name strong {
+          color: var(--text-main);
+        }
+        .notice-target-badge {
+          background: rgba(99, 102, 241, 0.15);
+          color: #a5b4fc;
+          padding: 3px 8px;
+          border-radius: 6px;
+          font-weight: 500;
         }
       `}</style>
     </div>

@@ -209,4 +209,25 @@ export const api = {
       headers: getHeaders(),
     });
   },
+
+  // Batch Attendance
+  markAttendanceBatch: (attendanceData) =>
+    request('/teacher/attendance/mark-batch', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(attendanceData),
+    }),
+
+  // Notices
+  getNotices: () =>
+    request('/notices', {
+      headers: getHeaders(),
+    }),
+
+  createNotice: (noticeData) =>
+    request('/notices/create', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(noticeData),
+    }),
 };

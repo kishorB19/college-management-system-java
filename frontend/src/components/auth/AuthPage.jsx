@@ -136,30 +136,30 @@ export default function AuthPage() {
             <div className="demo-buttons">
               <button 
                 type="button" 
-                onClick={() => handleQuickLogin('teacher', 'password123')}
-                disabled={loginLoading}
-                className="demo-btn demo-teacher"
-              >
-                <BookOpen size={14} />
-                <span>Teacher: Dr. Turing</span>
-              </button>
-              <button 
-                type="button" 
                 onClick={() => handleQuickLogin('student', 'password123')}
                 disabled={loginLoading}
                 className="demo-btn demo-student"
               >
                 <GraduationCap size={14} />
-                <span>Student: Alice</span>
+                <span>Student: Kishor Birajdar</span>
               </button>
               <button 
                 type="button" 
-                onClick={() => handleQuickLogin('admin', 'password123')}
+                onClick={() => handleQuickLogin('teacher', 'password123')}
                 disabled={loginLoading}
-                className="demo-btn demo-admin"
+                className="demo-btn demo-teacher"
               >
-                <ShieldCheck size={14} />
-                <span>Admin Portal</span>
+                <BookOpen size={14} />
+                <span>Faculty: Dr. Rajesh Sharma</span>
+              </button>
+              <button 
+                type="button" 
+                onClick={() => handleQuickLogin('teacher2', 'password123')}
+                disabled={loginLoading}
+                className="demo-btn demo-teacher"
+              >
+                <BookOpen size={14} />
+                <span>Faculty: Prof. Sunita Deshmukh</span>
               </button>
             </div>
           </div>
@@ -279,7 +279,7 @@ export default function AuthPage() {
                   type="text"
                   required
                   className="form-input"
-                  placeholder="e.g. John Doe"
+                  placeholder="e.g. Kishor Birajdar"
                   value={regForm.fullName}
                   onChange={(e) => setRegForm({ ...regForm, fullName: e.target.value })}
                 />
@@ -291,7 +291,7 @@ export default function AuthPage() {
                   type="text"
                   required
                   className="form-input"
-                  placeholder="e.g. johndoe"
+                  placeholder="e.g. kishor_b"
                   value={regForm.username}
                   onChange={(e) => setRegForm({ ...regForm, username: e.target.value })}
                 />
