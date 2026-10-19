@@ -1,3 +1,5 @@
+import { handleMockRequest } from './mockEngine';
+
 const BASE_URL = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.port === '5173'
   ? 'http://localhost:8080/api'
   : '/api');
@@ -18,19 +20,25 @@ function getHeaders(isJson = true) {
 }
 
 /**
- * Generic request helper with error handling.
+ * Generic request helper with error handling and automatic in-browser demo engine fallback.
  */
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;
   try {
     const res = await fetch(url, options);
-    const data = await res.json().catch(() => ({ success: false, message: 'Invalid response from server' }));
+    const contentType = res.headers.get('content-type') || '';
+
+    // If server returned HTML (Vercel SPA rewrite when no Java backend is on the domain)
+    if (!contentType.includes('application/json')) {
+      return handleMockRequest(endpoint, options);
+    }
+
+    const data = await res.json().catch(() => null);
+    if (!data) {
+      return handleMockRequest(endpoint, options);
+    }
 
     if (!res.ok) {
-      if (res.status === 401 || res.status === 403) {
-        // Token might be expired or invalid
-        // If not logging in, let caller handle or logout
-      }
       const err = new Error(data.message || (data.errors ? Object.values(data.errors).join(', ') : 'Request failed'));
       err.status = res.status;
       err.data = data;
@@ -38,6 +46,10 @@ async function request(endpoint, options = {}) {
     }
     return data;
   } catch (error) {
+    // If it's a network error, 404, or backend is offline, run seamlessly via local store
+    if (error.name === 'TypeError' || error.message?.includes('fetch') || error.status === 404 || error.status === 502) {
+      return handleMockRequest(endpoint, options);
+    }
     console.error(`API Error on [${options.method || 'GET'} ${url}]:`, error);
     throw error;
   }
