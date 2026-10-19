@@ -2,7 +2,7 @@
 
 EduCore is a full-stack College Management System featuring a modern reactive web dashboard, enterprise-grade Java backend, and role-based access control for Students, Teachers, and Administrators.
 
-🌐 **Live Production Link**: [https://frontend-ten-murex-2hsttxiju3.vercel.app](https://frontend-ten-murex-2hsttxiju3.vercel.app)
+🌐 **Live Production Link**: [https://educore-cms-portal.vercel.app](https://educore-cms-portal.vercel.app)
 
 ---
 
